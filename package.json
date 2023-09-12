@@ -1,6 +1,7 @@
 {
   "name": "crawlScore",
   "version": "1.0.0",
+  "type": "commonjs",
   "main": "index.js",
   "repository": "https://github.com/jake920220/gg-daily-kml.git",
   "author": "Junhyun <junhyun@innerviewit.com>",
