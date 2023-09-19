@@ -1,8 +1,19 @@
 const fs = require('fs');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const moment = require('moment');
 
-const targetUrl = 'https://kml.or.kr/stat98/record_list.php?year=2023&month=9'; // 크롤링할 웹사이트 주소
+const targetUrl = 'https://kml.or.kr/stat98/record_list.php?year=2023&month=9';
+const targetDate = '2023-09-18';
+
+const RETURN_POINT = 0;
+const OKA_POINT = 0;
+const UMA_POINT = [10, 5, -5, -10];
+const MATCH_LENGTH = {
+    '동장': 1,
+    '남장': 2
+};
+
 axios.get(targetUrl)
     .then((response) => {
         if (response.status === 200) {
@@ -28,10 +39,17 @@ axios.get(targetUrl)
                 // 각 열의 데이터를 rowData 배열에 추가
                 columns.each((colIndex, colElement) => {
                     const text = $(colElement).text().trim();
-                    if(colIndex === 0) {
+                    let isDate = false;
+
+                    if (colIndex === 0) {
                         obj['id'] = text;
                     } else if (colIndex === 1) {
                         obj['date'] = text;
+                        const date = moment(obj['date'], 'YYYY-MM-DD');
+                        // targetDate와 동일한 경우에만 해당 데이터를 처리
+                        if (date.format('YYYY-MM-DD') === targetDate) {
+                            isDate = true;
+                        }
                     } else if (colIndex === 2) {
                         obj['type'] = text;
                     } else if (colIndex === 3) {
@@ -43,14 +61,13 @@ axios.get(targetUrl)
                     } else if (colIndex === 6) {
                         obj['last'] = text;
                     }
+
+                    if(isDate) {
+                        EntireData.push(obj);
+                    }
                 });
-
-                EntireData.push(obj);
-                // rowData 배열에 있는 데이터 출력 또는 원하는 작업 수행
-                // console.log(rowData);
             });
-
-            console.log("HI", EntireData);
+            getDailyPoint(EntireData);
         }
     })
     .catch((error) => {
@@ -58,4 +75,39 @@ axios.get(targetUrl)
     });
 
 
-const
+const getDailyPoint = (dailyData) => {
+    const dailyPlayers = {};
+
+    dailyData.forEach((data) => {
+        const { first, second, third, last, type } = data;
+
+        setNamesAndPoints(dailyPlayers, first, 0, type);
+        setNamesAndPoints(dailyPlayers, second, 1, type);
+        setNamesAndPoints(dailyPlayers, third, 2, type);
+        setNamesAndPoints(dailyPlayers, last, 3, type);
+    });
+
+    for (const key in dailyPlayers) {
+        if (Object.hasOwnProperty.call(dailyPlayers, key)) {
+            dailyPlayers[key] = formatNumber(dailyPlayers[key]);
+        }
+    }
+
+    const dataArray = Object.entries(dailyPlayers).map(([name, value]) => ({ name, value }));
+    dataArray.sort((a, b) => b.value - a.value);
+
+    console.log(`${targetDate} 날짜의 순위`, dataArray);
+}
+
+const setNamesAndPoints = (obj, data, rank, type) => {
+    let splitData = data.split(":");
+    let point = parseInt(splitData[1].trim());
+    let name = splitData[0].split(']')[1];
+    let winPoint = (point - RETURN_POINT + OKA_POINT) / 1000 + (UMA_POINT[rank] * MATCH_LENGTH[type]);
+    obj[name] = obj[name] ? obj[name] + winPoint : winPoint;
+}
+
+const formatNumber = (num) => {
+    // return num >= 0 ? Math.round(num * 10) / 10 : Math.floor(num * 10) / 10;
+    return Number(num.toFixed(1));
+}
