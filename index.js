@@ -109,5 +109,20 @@ const setNamesAndPoints = (obj, data, rank, type) => {
 
 const formatNumber = (num) => {
     // return num >= 0 ? Math.round(num * 10) / 10 : Math.floor(num * 10) / 10;
-    return Number(num.toFixed(1));
+    if(num >= 0) {
+        return Number(num.toFixed(1));
+    } else {
+        const numberString = num.toString();
+
+        // 소수점을 기준으로 문자열을 분할
+        const parts = numberString.split('.');
+
+        if (parts.length === 2) {
+            // 소수점 이하 자릿수가 1자리 이상이면 첫 번째 자릿수까지 자름
+            parts[1] = parts[1].substring(0, 1);
+        }
+
+        // 다시 문자열로 합치고 반환
+        return Number(parts.join('.'));
+    }
 }
